@@ -137,22 +137,18 @@ namespace AdventOfCode.Days
 
             var insideLoop = clusters.SelectMany(c => c).ToList();
 
-            var result = 0L;
-            foreach (var pos in clusters.SelectMany(c => c).ToArray())
+            foreach (var pos in clusters.Select(c => c))
             {
-                var inversions = CountInversions(pipes, traversed, pos.Row, pos.Col);
-                if (inversions % 2 == 1)
+                var firstTile = pos.First();
+                var inversions = CountInversions(pipes, traversed, firstTile.Row, firstTile.Col);
+                if (inversions % 2 == 0)
                 {
-                    result++;
-                }
-                else
-                {
-                    insideLoop.Remove(pos);
+                    insideLoop.RemoveAll(p => pos.Contains(p));
                 }
             }
 
             Print(pipes, traversed, insideLoop);
-            return new ValueTask<string>(result.ToString());
+            return new ValueTask<string>(insideLoop.Count.ToString());
         }
 
         private static bool Traverse(char[][] pipes, ref Position position, ref int steps)
@@ -294,7 +290,27 @@ namespace AdventOfCode.Days
                 {
                     if (traversed.Any(p => p.Row == i && p.Col == j))
                     {
-                        Console.Write(pipes[i][j]);
+                        switch (pipes[i][j])
+                        {
+                            case '|':
+                                Console.Write('│');
+                                break;
+                            case '-':
+                                Console.Write('─');
+                                break;
+                            case 'L':
+                                Console.Write('└');
+                                break;
+                            case 'J':
+                                Console.Write('┘');
+                                break;
+                            case '7':
+                                Console.Write('┐');
+                                break;
+                            case 'F':
+                                Console.Write('┌');
+                                break;
+                        }
                     }
                     else if (insideLoop.Any(p => p.Row == i && p.Col == j))
                     {
