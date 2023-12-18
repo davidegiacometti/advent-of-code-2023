@@ -1,11 +1,11 @@
-﻿using System.Drawing;
+﻿using System.Globalization;
 using AoCHelper;
 
 namespace AdventOfCode.Days
 {
     public class Day18 : BaseDay
     {
-        private static readonly char[] _colorTrimChars = new char[] { '(', ')' };
+        private static readonly char[] _colorTrimChars = new char[] { '(', ')', '#' };
 
         public enum Direction
         {
@@ -17,6 +17,18 @@ namespace AdventOfCode.Days
 
         public override ValueTask<string> Solve_1()
         {
+            var result = Solve(Part.Part1);
+            return new ValueTask<string>(result.ToString());
+        }
+
+        public override ValueTask<string> Solve_2()
+        {
+            var result = Solve(Part.Part2);
+            return new ValueTask<string>(result.ToString());
+        }
+
+        public double Solve(Part part)
+        {
             var lines = File.ReadAllLines(InputFilePath);
             var digPlan = new Dig[lines.Length];
 
@@ -25,35 +37,58 @@ namespace AdventOfCode.Days
                 var splittedLine = lines[i].Split(' ');
                 Dig dig = default;
 
-                switch (splittedLine[0][0])
+                if (part == Part.Part1)
                 {
-                    case 'U':
-                        dig.Direction = Direction.Up;
-                        break;
-                    case 'R':
-                        dig.Direction = Direction.Right;
-                        break;
-                    case 'D':
-                        dig.Direction = Direction.Down;
-                        break;
-                    case 'L':
-                        dig.Direction = Direction.Left;
-                        break;
+                    switch (splittedLine[0][0])
+                    {
+                        case 'U':
+                            dig.Direction = Direction.Up;
+                            break;
+                        case 'R':
+                            dig.Direction = Direction.Right;
+                            break;
+                        case 'D':
+                            dig.Direction = Direction.Down;
+                            break;
+                        case 'L':
+                            dig.Direction = Direction.Left;
+                            break;
+                    }
+
+                    dig.Length = int.Parse(splittedLine[1]);
+                }
+                else
+                {
+                    var colorString = splittedLine[2].Trim(_colorTrimChars);
+                    switch (colorString[^1])
+                    {
+                        case '0':
+                            dig.Direction = Direction.Right;
+                            break;
+                        case '1':
+                            dig.Direction = Direction.Down;
+                            break;
+                        case '2':
+                            dig.Direction = Direction.Left;
+                            break;
+                        case '3':
+                            dig.Direction = Direction.Up;
+                            break;
+                    }
+
+                    dig.Length = int.Parse(colorString[..5], NumberStyles.HexNumber);
                 }
 
-                dig.Length = int.Parse(splittedLine[1]);
-                dig.Color = ColorTranslator.FromHtml(splittedLine[2].Trim(_colorTrimChars));
                 digPlan[i] = dig;
             }
 
             var positions = new List<Position> { new(0, 0) };
-
             for (var i = 0; i < digPlan.Length; i++)
             {
                 MakeDig(digPlan[i], positions);
             }
 
-            positions.RemoveAt(0); // (0, 0) is present twice
+            positions.Remove(new(0, 0)); // Remove duplicated starting position
 
             // Positions can go negative, so we need to shift
             var rowMin = Math.Abs(positions.Min(d => d.Row));
@@ -66,7 +101,7 @@ namespace AdventOfCode.Days
                 positions[i] = new Position(row, col);
             }
 
-            var rowMax = positions.Max(d => d.Row);
+            /*var rowMax = positions.Max(d => d.Row);
             var colMax = positions.Max(d => d.Col);
 
             var notDigged = new List<Position>();
@@ -111,13 +146,19 @@ namespace AdventOfCode.Days
                 internalArea = new HashSet<Position>(area);
             }
 
-            // Print(positions, internalArea);
-            return new ValueTask<string>((positions.Count + internalArea.Count).ToString());
-        }
+            return positions.Count + internalArea.Count;*/
 
-        public override ValueTask<string> Solve_2()
-        {
-            return new ValueTask<string>(string.Empty);
+            // Shoelace formula: https://en.wikipedia.org/wiki/Shoelace_formula
+            // Pick's theorem: https://en.wikipedia.org/wiki/Pick%27s_theorem
+            var res1 = 0L;
+            var res2 = 0L;
+            for (int i = 0; i < positions.Count; i++)
+            {
+                res1 += positions[i].Col * positions[(i + 1) % positions.Count].Row;
+                res2 += positions[i].Row * positions[(i + 1) % positions.Count].Col;
+            }
+
+            return (positions.Count / 2) + Math.Abs((res1 - res2) / 2) + 1;
         }
 
         private static void MakeDig(Dig dig, List<Position> positions)
@@ -193,7 +234,7 @@ namespace AdventOfCode.Days
 
         private static IEnumerable<Position> GetAdjacentPositions(Position pos)
         {
-            var cols = Enumerable.Range(pos.Col - 1, 3).ToArray();
+            var cols = new[] { pos.Col - 1, pos.Col, pos.Col + 1 };
             return new[] { new Position(pos.Row, cols[0]), new Position(pos.Row, cols[^1]) } // Same row
                 .Concat(cols.Select(col => new Position(pos.Row - 1, col))) // Previous row
                 .Concat(cols.Select(col => new Position(pos.Row + 1, col))); // Next row
@@ -205,16 +246,14 @@ namespace AdventOfCode.Days
 
             public int Length { get; set; }
 
-            public Color Color { get; set; }
-
-            public readonly override string ToString() => $"{Direction} {Length} ({Color})";
+            public readonly override string ToString() => $"{Direction} {Length}";
         }
 
-        public struct Position(int row, int col)
+        public struct Position(long row, long col)
         {
-            public int Row { get; set; } = row;
+            public long Row { get; set; } = row;
 
-            public int Col { get; set; } = col;
+            public long Col { get; set; } = col;
 
             public override readonly string ToString() => $"({Row}, {Col})";
         }
