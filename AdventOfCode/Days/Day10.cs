@@ -118,6 +118,7 @@ namespace AdventOfCode.Days
                 while (clusterQueue.Count > 0)
                 {
                     var tile = clusterQueue.Dequeue();
+                    notTraversed.Remove(tile);
                     var adjacentTiles = GetAdjacentPositions(tile).Where(notTraversed.Contains);
                     foreach (var t in adjacentTiles)
                     {
@@ -333,7 +334,7 @@ namespace AdventOfCode.Days
         private static IEnumerable<Position> GetAdjacentPositions(Position pos)
         {
             var cols = Enumerable.Range(pos.Col - 1, 3).ToArray();
-            return new[] { new Position(pos.Row, cols[0]), new Position(pos.Row, cols[1]) } // Same row
+            return new[] { new Position(pos.Row, cols[0]), new Position(pos.Row, cols[^1]) } // Same row
                 .Concat(cols.Select(col => new Position(pos.Row - 1, col))) // Previous row
                 .Concat(cols.Select(col => new Position(pos.Row + 1, col))); // Next row
         }
